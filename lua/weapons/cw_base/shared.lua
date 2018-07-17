@@ -262,7 +262,7 @@ SWEP.ReloadSpeed = 1
 SWEP.DrawSpeed = 1
 
 SWEP.Chamberable = true
-SWEP.UseHands = true
+SWEP.UseHands = false
 SWEP.CanPenetrate = true
 SWEP.CanRicochet = true
 SWEP.AddSafeMode = true
@@ -506,6 +506,7 @@ function SWEP:setBodygroup(main, sub)
 
 	if self.CW_VM then
 		self.CW_VM:SetBodygroup(main, sub)
+		--self.CW_VM:SetColor(Color(0,0,0,255))
 	end
 end
 

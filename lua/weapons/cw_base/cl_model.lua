@@ -236,32 +236,11 @@ function SWEP:offsetBones()
 	
 	if self.AttachmentModelsVM then
 		local can = false
-		local canModifyBones = self.AttachmentModelsVM.md_foregrip or self.AttachmentModelsVM.md_m203 or self.ForegripOverride or self.BaseHoldPos or self.AttachmentModelsVM.md_podonok_handguard
+		local canModifyBones = self.AttachmentModelsVM.md_foregrip or self.AttachmentModelsVM.md_m203 or self.ForegripOverride
 		
 		local foregrip = (self.AttachmentModelsVM.md_foregrip and self.AttachmentModelsVM.md_foregrip.active)
 		local m203 = (self.AttachmentModelsVM.md_m203 and self.AttachmentModelsVM.md_m203.active)
-		local PHG = (self.AttachmentModelsVM.md_podonok_handguard and self.AttachmentModelsVM.md_podonok_handguard.active)
-		
-		if PHG then
-			if self.Sequence == self.Animations.reload or self.Sequence == self.Animations.reload_empty then
-				if self.wasEmpty then 
-					if self.Cycle >= self.ForeGripOffsetCycle_Reload_Empty then
-						can = true
-					end
-				else
-					if self.Cycle >= self.ForeGripOffsetCycle_Reload then
-						can = true
-					end
-				end
-			elseif self.Sequence == self.Animations.draw then
-				if self.Cycle >= self.ForeGripOffsetCycle_Draw then
-					can = true
-				end
-			else
-				can = true
-			end
-		end
-		
+	
 		if foregrip or self.ForegripOverride then
 			if self.Sequence == self.Animations.reload or self.Sequence == self.Animations.reload_empty then
 				if self.wasEmpty then 
@@ -303,10 +282,7 @@ function SWEP:offsetBones()
 		end
 		
 		local targetTbl = false
-		if self.BaseHoldPos then
-			targetTbl = self.BaseHoldPos
-			can = true
-		end
+		
 		-- select the desired offset table
 		if can then
 			if self.ForegripOverride then
@@ -323,8 +299,6 @@ function SWEP:offsetBones()
 					targetTbl = self.ForeGripHoldPos
 				elseif m203 then
 					targetTbl = self.M203HoldPos
-				elseif PHG then
-					targetTbl = self.PHGHoldPos
 				end
 			end
 		end
@@ -755,83 +729,7 @@ function SWEP:applyOffsetToVM()
 	self.CW_VM:SetPos(pos)
 	self.CW_VM:SetAngles(ang)
 end
-	local allbones
-	local hasGarryFixedBoneScalingYet = false
 
-	function SWEP:UpdateBonePositions(vm)
-		
-		if self.ViewModelBoneMods then
-			
-			if (!vm:GetBoneCount()) then return end
-			
-			-- // !! WORKAROUND !! --//
-			-- // We need to check all model names :/
-			local loopthrough = self.ViewModelBoneMods
-			if (!hasGarryFixedBoneScalingYet) then
-				allbones = {}
-				for i=0, vm:GetBoneCount() do
-					local bonename = vm:GetBoneName(i)
-					if (self.ViewModelBoneMods[bonename]) then 
-						allbones[bonename] = self.ViewModelBoneMods[bonename]
-					else
-						allbones[bonename] = { 
-							scale = Vector(1,1,1),
-							pos = Vector(0,0,0),
-							angle = Angle(0,0,0)
-						}
-					end
-				end
-				
-				loopthrough = allbones
-			end
-			//!! ----------- !! --
-			
-			for k, v in pairs( loopthrough ) do
-				local bone = vm:LookupBone(k)
-				if (!bone) then continue end
-				
-				-- // !! WORKAROUND !! --//
-				local s = Vector(v.scale.x,v.scale.y,v.scale.z)
-				local p = Vector(v.pos.x,v.pos.y,v.pos.z)
-				local ms = Vector(1,1,1)
-				if (!hasGarryFixedBoneScalingYet) then
-					local cur = vm:GetBoneParent(bone)
-					while(cur >= 0) do
-						local pscale = loopthrough[vm:GetBoneName(cur)].scale
-						ms = ms * pscale
-						cur = vm:GetBoneParent(cur)
-					end
-				end
-				
-				s = s * ms
-				//!! ----------- !! --
-				
-				if vm:GetManipulateBoneScale(bone) != s then
-					vm:ManipulateBoneScale( bone, s )
-				end
-				if vm:GetManipulateBoneAngles(bone) != v.angle then
-					vm:ManipulateBoneAngles( bone, v.angle )
-				end
-				if vm:GetManipulateBonePosition(bone) != p then
-					vm:ManipulateBonePosition( bone, p )
-				end
-			end
-		else
-			self:ResetBonePositions(vm)
-		end
-		   
-	end
-	 
-	function SWEP:ResetBonePositions(vm)
-		
-		if (!vm:GetBoneCount()) then return end
-		for i=0, vm:GetBoneCount() do
-			vm:ManipulateBoneScale( i, Vector(1, 1, 1) )
-			vm:ManipulateBoneAngles( i, Angle(0, 0, 0) )
-			vm:ManipulateBonePosition( i, Vector(0, 0, 0) )
-		end
-		
-	end
 function SWEP:_drawViewModel()
 	-- draw the viewmodel
 	
@@ -843,7 +741,6 @@ function SWEP:_drawViewModel()
 	
 	self.CW_VM:FrameAdvance(FrameTime())
 	self.CW_VM:SetupBones()
-	self:UpdateBonePositions(self.CW_VM)
 	self.CW_VM:DrawModel()
 	
 	if self.ViewModelFlip then
@@ -852,7 +749,6 @@ function SWEP:_drawViewModel()
 	
 	-- draw the attachments
 	self:drawAttachments()
-	self:drawNewBaseModel()
 	
 	-- draw the customization menu
 	self:drawInteractionMenu()
@@ -866,7 +762,6 @@ function SWEP:_drawViewModel()
 	if GetConVarNumber("cw_customhud_ammo") >= 1 then
 		self:draw3D2DHUD()
 	end
-
 end
 
 SWEP.HUD_3D2D_MagColor = Color(255, 255, 255, 255)
@@ -1152,7 +1047,7 @@ function SWEP:drawAttachments()
 	
 	for k, v in pairs(self.AttachmentModelsVM) do
 		-- no point in drawing/positioning models that are not visible
-		if k == "base_model" or k == "base_model1" or k == "mag_model" then self:_drawAttachmentModels(v) end
+		
 		if v.active then
 			self:_drawAttachmentModels(v)
 		end
@@ -1161,20 +1056,6 @@ function SWEP:drawAttachments()
 	-- call various functions that attachments may (or may not) add (such as laser sights)
 	for k, v in pairs(self.elementRender) do
 		v(self)
-	end
-	
-	return true
-end
-
-function SWEP:drawNewBaseModel()
-	if not self.WModelToModelsVM then
-		return false
-	end
-	
-	local FT = FrameTime()
-	
-	for k, v in pairs(self.WModelToModelsVM) do
-		self:_drawAttachmentModels(v)
 	end
 	
 	return true
